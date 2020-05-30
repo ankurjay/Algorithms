@@ -8,6 +8,7 @@ import plotly.express as px
 
 
 class Map:
+    '''Used to create a Map object'''
     def __init__(self, height=5, width=5, numObjects=1):
         self.h = height
         self.w = width
@@ -29,6 +30,7 @@ class Map:
 
 
 class Simulation:
+    '''Used to create a Simulation object'''
     def __init__(self, mapDict):
         self.h = mapDict['height']
         self.w = mapDict['width']
@@ -39,6 +41,10 @@ class Simulation:
         self.goal = None
 
     def createGoal(self, h, w):
+        '''
+        :param h: height or 'y' coordinate of initial pose of goal
+        :param w: width or 'x' coordinate of initial pose of goal
+        '''
         if not self.goal:
             self.goal = (h, w)
             self.occupancies[h][w] = 3
@@ -55,6 +61,10 @@ class Simulation:
                 return
 
     def createRobot(self, h, w):
+        '''
+        :param h: height or 'y' coordinate of initial pose of robot
+        :param w: width or 'x' coordinate of initial pose of robot
+        '''
         if not self.robot:
             self.robot = (h, w)
             self.occupancies[h][w] = 2
@@ -74,11 +84,7 @@ class Simulation:
 
     def plan(self):
         '''
-        :param initpose: A tuple of x and y coordinates of initial pose of robot
-        :param goalpose: A tuple of x and y coordinates of goal of robot
-        :param obstacles: A set containing tuples of x and y coordinates of static obstacles
-        :param robots: A set containing tuples of x and y coordinates of all other robots in the environment
-        :return: Empty list if no path found in 20000 iterations, or Optimal List of coordinates to visit
+        A* Algorithm planner
         '''
         initpose = self.getRobotCoordinates()
         goalpose = self.getGoalCoordinates()
@@ -141,6 +147,7 @@ class Simulation:
                     agenda.addToAgenda(pose_left, heuristic((last_state_x + 0, last_state_y - 0), goalpose))
 
     def plot(self):
+        '''Does the plotting task for occupancy grid after complete planning'''
         self.getFigure()
         planned_path,visited_nodes = self.plan()
         for item in visited_nodes:
@@ -162,6 +169,7 @@ class Simulation:
         return plt.figure(figsize=(self.h, self.w))
 
     def showMap(self):
+        '''Does plotting task for occupancy grid'''
         if self.robot is not None and self.goal is not None:
             cmap = colors.ListedColormap(['white', 'black', 'red', 'green', 'blue','cyan'])
         else:
@@ -173,15 +181,22 @@ class Simulation:
 
 
 class Agenda:
+    '''A priority queue'''
     def __init__(self):
+        '''Initialize empty agenda'''
         self.agenda = []
 
     def addToAgenda(self, path, hc):
+        '''
+        :param path: A list of poses (tuples) that signify a succession of states of the robot
+        :param hc: heuristic cost as computed from the heuristic function
+        '''
         cost = len(path) + hc
         self.agenda.append([cost, path])
         self.agenda = sorted(self.agenda, key=lambda x: x[0])
 
     def getFromAgenda(self):
+        '''Returns the first element of the Agenda'''
         return self.agenda.pop(0)
 
     def isEmpty(self):
@@ -189,12 +204,22 @@ class Agenda:
 
 
 def heuristic(ip, gp):
+    '''
+        :param ip: A tuple of x and y coordinates of current pose of robot
+        :param gp: A tuple of x and y coordinates of goal of robot
+        :return: A numerical (double) value of the heuristic cost
+        '''
     return math.sqrt((ip[0] - gp[0]) ** 2 + (ip[1] - gp[1]) ** 2)
-
-
-#    return abs(ip[0]-gp[0]) + abs(ip[1]-gp[1])
+#    return abs(ip[0]-gp[0]) + abs(ip[1]-gp[1]) # Alternative heuristic - Manhattan Distance. Uncomment this and comment the previous line to use this heuristic
 
 if __name__ == '__main__':
+    '''User inputs should be h, w, n.
+    h: height of gridmap
+    w: width of gridmap
+    n: number of obstacles
+    
+    Optionally, the user may input the robot's initial pose and goal pose as per the commented-out lines
+    '''
     h = 50
     w = 50
     n = 50
@@ -202,6 +227,8 @@ if __name__ == '__main__':
     sim = Simulation(newMap.getMapDetails())
     sim.createRobot(random.randint(0, h - 1), random.randint(0, w - 1))
     sim.createGoal(random.randint(0, h - 1), random.randint(0, w - 1))
+    #sim.createRobot(5, 7)
+    #sim.createGoal(34,14)
     sim.getFigure()
     sim.showMap()
     sim.plot()

@@ -3,7 +3,7 @@ from pygame.locals import *
 import random, math, sys
 import numpy as np
 
-OBSTACLES = 500
+OBSTACLES = 50
 ROWS = 100
 COLUMNS = 100
 CELL_SIZE = 10
@@ -16,6 +16,8 @@ WHITE = (255, 255, 255)
 
 SCREEN_WIDTH = CELL_SIZE * COLUMNS
 SCREEN_HEIGHT = CELL_SIZE * ROWS
+
+# DO NOT TOUCH THIS STUFF----------------------------------------------------------------------------------------------
 
 class Map:
     def __init__(self, height=ROWS, width=COLUMNS, numObjects=OBSTACLES):
@@ -37,6 +39,10 @@ class Map:
         return self.obstacles
 
 def createObstacles(objects):
+    """
+    :param objects: A set of tuples (row,column) that are coordinates of the obstacles
+    :return: A group containing obstacles specified by coordinates (column, row) or (x,y)
+    """
     obstacles = pygame.sprite.Group()
     for i in objects:
         O = Obstacles(i[1], i[0])
@@ -66,9 +72,14 @@ class PathSprites(pygame.sprite.Sprite):
         pass  # Do nothing; obstacles do not move
 
 def createGoal(goal):
+    """
+    :param goal: A dictionary of goals tuples (row, column)
+    :return: A group of goals specified by (column, row) or (x,y)
+    """
     goals = pygame.sprite.Group()
-    G = Goal(goal['goal_1'][1], goal['goal_1'][0])
-    goals.add(G)
+    for key in goal:
+        G = Goal(goal[key][1], goal[key][0])
+        goals.add(G)
     return goals
 
 class Goal(pygame.sprite.Sprite):
@@ -83,9 +94,14 @@ class Goal(pygame.sprite.Sprite):
         pass  # Do nothing; obstacles do not move
 
 def createRobot(robot):
+    """
+    :param robot: A dictionary of  robot tuples (row, column)
+    :return: A group of robots specified by (column, row) or (x,y)
+    """
     robots = pygame.sprite.Group()
-    R = Robot(robot['robot_1'][1], robot['robot_1'][0])
-    robots.add(R)
+    for key in robot.keys():
+        R = Robot(robot[key][1], robot[key][0])
+        robots.add(R)
     return robots
 
 class Robot(pygame.sprite.Sprite):
@@ -102,7 +118,29 @@ class Robot(pygame.sprite.Sprite):
         print (action[0], action[1])
         print (self.rect.top/CELL_SIZE, self.rect.left/CELL_SIZE)
 
-class AStarSimulator(Map):
+class Agenda:
+    def __init__(self):
+        self.agenda = []
+
+    def addToAgenda(self, path, hc, actionplan):
+        cost = len(path) + hc
+        self.agenda.append([cost, path, actionplan])
+        self.agenda = sorted(self.agenda, key=lambda x: x[0])
+
+    def getFromAgenda(self):
+        return self.agenda.pop(0)
+
+    def isEmpty(self):
+        return not any(self.agenda)
+
+    def viewFromAgenda(self):
+        return self.agenda[0]
+
+def heuristic(ip, gp):
+    return math.sqrt((ip[0] - gp[0]) ** 2 + (ip[1] - gp[1]) ** 2)
+#    return abs(ip[0]-gp[0]) + abs(ip[1]-gp[1])
+
+class Simulator(Map):
     def __init__(self, height=ROWS, width=COLUMNS, numObjects=OBSTACLES):
         Map.__init__(self, height, width, numObjects)
         self.robot = None
@@ -141,6 +179,7 @@ class AStarSimulator(Map):
             return
 
     def getMap(self):
+        """Returns a set of tuples of obstacle coordinates"""
         return self.occupancies
 
     def getRobotCoordinates(self):
@@ -151,109 +190,295 @@ class AStarSimulator(Map):
         """Returns a dictionary of tuples of goal coordinates"""
         return self.goal
 
+    def moveUpYRows(self, last_y):
+        return last_y - 1
+
+    def moveDownYRows(self, last_y):
+        return last_y + 1
+
+    def moveRightXCols(self, last_x):
+        return last_x + 1
+
+    def moveLeftXCols(self, last_x):
+        return last_x - 1
+
+    def dontMove(self, coord):
+        return coord
+
+    def up(self):
+        return (-1, 0)
+
+    def down(self):
+        return (1, 0)
+
+    def right(self):
+        return (0, 1)
+
+    def left(self):
+        return (0, -1)
+
+# MODIFY ONLY THIS ---------------------------------------------------------------------------------------------------------
+
+class AStarSimulator(Simulator):
+    def __init__(self, height = ROWS, width = COLUMNS, numObjects = OBSTACLES):
+        Simulator.__init__(self, height, width, numObjects)
+        self.initpose = {}
+        self.initaction = {}
+        self.goalpose = {}
+        self.agenda = {}
+        self.visited = {}
+        self.initpath = {}
+        self.count = {}
+        self.flag = {}
+        self.a = {}
+        self.retrpath = {}
+        self.actionplan = {}
+        self.next_state = {}
+        self.last_state = {}
+
+    def checkAndMoveUp(self, last_state_row, last_state_col, key, next_state):
+        # Move Up Conditions
+        if self.moveUpYRows(last_state_row) < 0 or self.dontMove(last_state_col) >= self.w:  # Check for out of bounds
+            #print "Checking MoveUp, out of bounds"
+            pass  # Do nothing
+        else:
+            if (self.moveUpYRows(last_state_row), self.dontMove(last_state_col)) in self.visited[key]:  # Check for visited nodes
+                #print "Checking MoveUp, visited node"
+                pass  # Do nothing
+            else:
+                if next_state:  # If next_state has been filled
+                    templist = []
+                    for vals in next_state.values(): # Get a list of tuples
+                        templist += vals # Append to larger list
+                    #print "templist of states", templist
+                    if (self.moveUpYRows(last_state_row), self.dontMove(last_state_col)) in templist:  # Check for robot clashes
+                        pass  # Do nothing; modify this later
+                    else: # If no robot clashes, only then update next_state
+                        #print "Currently key is : ", key
+                        if key not in next_state:
+                            #print "Key not there"
+                            next_state[key] = [] + [(self.moveUpYRows(last_state_row), self.dontMove(last_state_col))]
+                            #print "Is Key there now? : ", key in next_state
+                        else:
+                            #print "Key is there"
+                            next_state[key] += [(self.moveUpYRows(last_state_row), self.dontMove(last_state_col))]
+                        pose_up = self.retrpath[key] + [(self.moveUpYRows(last_state_row), self.dontMove(last_state_col))]
+                        action_next = self.actionplan[key] + [self.up()]
+                        self.visited[key].add((self.moveUpYRows(last_state_row), self.dontMove(last_state_col)))
+                        self.agenda[key].addToAgenda(pose_up, heuristic((self.moveUpYRows(last_state_row), self.dontMove(last_state_col)), self.goalpose[key]), action_next)
+                else:  # If next_state has not been filled, update next_state
+                    next_state[key] = [] + [(self.moveUpYRows(last_state_row), self.dontMove(last_state_col))]
+                    pose_up = self.retrpath[key] + [(self.moveUpYRows(last_state_row), self.dontMove(last_state_col))]
+                    action_next = self.actionplan[key] + [self.up()]
+                    self.visited[key].add((self.moveUpYRows(last_state_row), self.dontMove(last_state_col)))
+                    self.agenda[key].addToAgenda(pose_up, heuristic((self.moveUpYRows(last_state_row), self.dontMove(last_state_col)), self.goalpose[key]), action_next)
+        #print "MoveUp Complete\n\n\n\n"
+        return next_state # Returns the dictionary of lists of tuples
+
+    def checkAndMoveDown(self, last_state_row, last_state_col, key, next_state):
+        # Move Down Conditions
+        if self.moveDownYRows(last_state_row) >= self.h or self.dontMove(last_state_col) >= self.w:
+            #print "Checking MoveDown, out of bounds"
+            pass  # Do nothing
+        else:
+            if (self.moveDownYRows(last_state_row), self.dontMove(last_state_col)) in self.visited[key]:  # Check for visited nodes
+                #print "Checking MoveDown, visited node"
+                pass  # Do nothing
+            else:
+                if next_state:  # If next_state has been filled
+                    templist = []
+                    for vals in next_state.values(): # Get a list of tuples
+                        #print vals
+                        templist += vals # Append to larger list
+                    #print "templist of states", templist
+                    if (self.moveDownYRows(last_state_row), self.dontMove(last_state_col)) in templist:  # Check for robot clashes
+                        pass  # Do nothing; modify this later
+                    else:
+                        #print "Currently key is : ", key
+                        if key not in next_state:
+                            #print "Key not there"
+                            next_state[key] = [] + [(self.moveDownYRows(last_state_row), self.dontMove(last_state_col))]
+                            #print "Is Key there now? : ", key in next_state
+                        else:
+                            #print "Key is there"
+                            next_state[key] += [(self.moveDownYRows(last_state_row), self.dontMove(last_state_col))]
+                        pose_up = self.retrpath[key] + [(self.moveDownYRows(last_state_row), self.dontMove(last_state_col))]
+                        action_next = self.actionplan[key] + [self.down()]
+                        self.visited[key].add((self.moveDownYRows(last_state_row), self.dontMove(last_state_col)))
+                        self.agenda[key].addToAgenda(pose_up, heuristic((self.moveDownYRows(last_state_row), self.dontMove(last_state_col)), self.goalpose[key]), action_next)
+                else:  # If next_state has not been filled
+                    next_state[key] = [] + [(self.moveDownYRows(last_state_row), self.dontMove(last_state_col))]
+                    pose_up = self.retrpath[key] + [(self.moveDownYRows(last_state_row), self.dontMove(last_state_col))]
+                    action_next = self.actionplan[key] + [self.down()]
+                    self.visited[key].add((self.moveDownYRows(last_state_row), self.dontMove(last_state_col)))
+                    self.agenda[key].addToAgenda(pose_up, heuristic((self.moveDownYRows(last_state_row), self.dontMove(last_state_col)), self.goalpose[key]), action_next)
+        #print "MoveDown Complete\n\n\n\n"
+        return next_state
+
+    def checkAndMoveRight(self, last_state_row, last_state_col, key, next_state):
+        # Move Right Conditions
+        if self.dontMove(last_state_row) >= self.h or self.moveRightXCols(last_state_col) >= self.w:
+            #print "Checking MoveRight, out of bounds"
+            pass  # Do nothing
+        else:
+            if (self.dontMove(last_state_row), self.moveRightXCols(last_state_col)) in self.visited[key]:  # Check for visited nodes
+                #print "Checking MoveRight, visited node"
+                pass  # Do nothing
+            else:
+                if next_state:  # If next_state has been filled
+                    templist = []
+                    for vals in next_state.values(): # Get a list of tuples
+                        templist += vals # Append to larger list
+                    #print "templist of states", templist
+                    if (self.dontMove(last_state_row), self.moveRightXCols(last_state_col)) in templist:  # Check for robot clashes
+                        pass  # Do nothing; modify this later
+                    else:
+                        #print "Currently key is : ", key
+                        if key not in next_state:
+                            #print "Key not there"
+                            next_state[key] = [] + [(self.dontMove(last_state_row), self.moveRightXCols(last_state_col))]
+                            #print "Is Key there now? : ", key in next_state
+                        else:
+                            #print "Key is there"
+                            next_state[key] += [(self.dontMove(last_state_row), self.moveRightXCols(last_state_col))]
+                        pose_up = self.retrpath[key] + [(self.dontMove(last_state_row), self.moveRightXCols(last_state_col))]
+                        action_next = self.actionplan[key] + [self.right()]
+                        self.visited[key].add((self.dontMove(last_state_row), self.moveRightXCols(last_state_col)))
+                        self.agenda[key].addToAgenda(pose_up, heuristic((self.dontMove(last_state_row), self.moveRightXCols(last_state_col)), self.goalpose[key]), action_next)
+                else:  # If next_state has not been filled
+                    next_state[key] = [] + [(self.dontMove(last_state_row), self.moveRightXCols(last_state_col))]
+                    pose_up = self.retrpath[key] + [(self.dontMove(last_state_row), self.moveRightXCols(last_state_col))]
+                    action_next = self.actionplan[key] + [self.right()]
+                    self.visited[key].add((self.dontMove(last_state_row), self.moveRightXCols(last_state_col)))
+                    self.agenda[key].addToAgenda(pose_up, heuristic((self.dontMove(last_state_row), self.moveRightXCols(last_state_col)), self.goalpose[key]),action_next)
+        #print "MoveRight Complete\n\n\n\n"
+        return next_state
+
+    def checkAndMoveLeft(self, last_state_row, last_state_col, key, next_state):
+        # Move Left Conditions
+        if self.dontMove(last_state_row) + 0 >= self.h or self.moveLeftXCols(last_state_col) < 0:
+            #print "Checking MoveLeft, out of bounds"
+            pass  # Do nothing
+        else:
+            if (self.dontMove(last_state_row), self.moveLeftXCols(last_state_col)) in self.visited[key]:  # Check for visited nodes
+                #print "Checking MoveLeft, visited node"
+                pass  # Do nothing
+            else:
+                if next_state:  # If next_state has been filled
+                    #print "next_state is : ",next_state
+                    templist = []
+                    for vals in next_state.values(): # Get a list of tuples
+                        templist += vals # Append to larger list
+                    #print "templist of states", templist
+                    if (self.dontMove(last_state_row), self.moveLeftXCols(last_state_col)) in templist:  # Check for robot clashes
+                        pass  # Do nothing; modify this later
+                    else:
+                        #print "Currently key is : ", key
+                        if key not in next_state:
+                            #print "Key not there"
+                            next_state[key] = [] + [(self.dontMove(last_state_row), self.moveLeftXCols(last_state_col))]
+                            #print "Is Key there now? : ", key in next_state
+                        else:
+                            #print "Key is there"
+                            next_state[key] += [(self.dontMove(last_state_row), self.moveLeftXCols(last_state_col))]
+                        pose_up = self.retrpath[key] + [(self.dontMove(last_state_row), self.moveLeftXCols(last_state_col))]
+                        action_next = self.actionplan[key] + [self.right()]
+                        self.visited[key].add((self.dontMove(last_state_row), self.moveLeftXCols(last_state_col)))
+                        self.agenda[key].addToAgenda(pose_up, heuristic((self.dontMove(last_state_row), self.moveLeftXCols(last_state_col)), self.goalpose[key]), action_next)
+                else:  # If next_state has not been filled
+                    next_state[key] = [] + [(self.dontMove(last_state_row), self.moveLeftXCols(last_state_col))]
+                    pose_up = self.retrpath[key] + [(self.dontMove(last_state_row), self.moveLeftXCols(last_state_col))]
+                    action_next = self.actionplan[key] + [self.right()]
+                    self.visited[key].add((self.dontMove(last_state_row), self.moveLeftXCols(last_state_col)))
+                    self.agenda[key].addToAgenda(pose_up, heuristic((self.dontMove(last_state_row), self.moveLeftXCols(last_state_col)), self.goalpose[key]),action_next)
+        #print "MoveLeft Complete\n\n\n\n"
+        return next_state
+
     def plan(self):
         '''
-        :param initpose: A tuple of x and y coordinates of initial pose of robot
-        :param goalpose: A tuple of x and y coordinates of goal of robot
-        :param obstacles: A set containing tuples of x and y coordinates of static obstacles
-        :param robots: A set containing tuples of x and y coordinates of all other robots in the environment
-        :return: Empty list if no path found in 20000 iterations, or Optimal List of coordinates to visit
+        :return: retrpath (dictionary of lists of full paths), visited (dictionary of sets of visited nodes), actionplan (dictionary of lists of actions)
         '''
-        initpose = self.getRobotCoordinates()['robot_1'] #This is now a dictionary
-        initaction = [] + [(0,0)]
-        goalpose = self.getGoalCoordinates()['goal_1'] # This is now a dictionary
-        obs = self.obstacles
-        agenda = Agenda()
-        initcost = heuristic(initpose, goalpose)
-        visited = {initpose}
-        visited.update(obs) # Adding obstacles to list of visited points so we won't try to move to these points on map
-        initpath = [] + [initpose]
-        agenda.addToAgenda(initpath, initcost, initaction)
-        count = 0
+
+        # Initialize empty dictionaries for all variables we will use
+
+        for key in self.robot.keys():
+            self.initpose[key] = self.getRobotCoordinates()[key]
+            self.initaction[key] = [] + [(0,0)]
+            self.goalpose[key] = self.getGoalCoordinates()['goal_'+str(key[-1])]  # Here I am making the same key refer to goal and robot
+            self.agenda[key] = Agenda()
+            self.visited[key] = {self.initpose[key]}
+            self.visited[key].update(self.obstacles) # Adding obstacles to list of visited points so we won't try to move to these points on map
+            self.initpath[key] = [] + [self.initpose[key]]
+            initcost = heuristic(self.initpose[key], self.goalpose[key])
+            self.agenda[key].addToAgenda(self.initpath[key], initcost, self.initaction[key])
+            self.count[key] = 0
+            self.flag[key] = 0
+
+        # Now the loop starts
+
         while True:
-            a = agenda.getFromAgenda()
-            count += 1
-            if count == 1000000:
+            # First, check for exit condition : High number of iterations
+            if any(count >= 10000 for count in self.count.values()):
                 print "Too long to search"
-                print "iterations taken =  " + str(count)
-                return [], visited, []
-            if a[1][-1] == goalpose:
-                retrpath = a[1]
-                lastaction = (goalpose[0] - a[1][-2][0], goalpose[1] - a[1][-2][1])
-                actionplan = a[2] + [lastaction]
-                print "optimal path found"
-                print "iterations taken = " + str(count)
-                return retrpath, visited, actionplan
+                print "iterations taken =  " + str(self.count)
+                return {}, self.visited, {}
+
+            # Next, get from agendas if agendas are not empty and check for goal condition
+            for key in self.robot.keys():
+                if not self.agenda[key].isEmpty(): # if agenda is not empty
+                    self.a[key] = self.agenda[key].getFromAgenda() # a has stored the items on agenda
+                    self.count[key] += 1
+                    if self.a[key][1][-1] == self.goalpose[key]: # If reached goal
+                        print "goal reached for key = ", key
+                        if self.flag[key] == 0: # And flag is 0
+                            self.flag[key] = 1 # Set flag to 1
+                            self.retrpath[key] = self.a[key][1]
+                            lastaction = (self.goalpose[key][0] - self.a[key][1][-2][0], self.goalpose[key][1] - self.a[key][1][-2][1])
+                            self.actionplan[key] = self.a[key][2] + [lastaction]
+                            print "optimal path found"
+                            print "iterations taken = " + str(self.count[key])
+                        # If flag is nonzero, do nothing
+                        elif self.flag[key] == 1:
+                            pass
+                    else:
+                        pass
+                elif self.agenda[key].isEmpty(): # If no more options, trigger exit condition by setting flag
+                    #print "now agenda is empty"
+                    self.flag[key] = 1
+                    #print self.flag[key]
+
+            if all(value == 1 for value in self.flag.values()): # If all flags are 1
+                print "Exit condition triggered"
+                return self.retrpath, self.visited, self.actionplan
+
             else:
-                retrpath = a[1]
-                actionplan = a[2]
-                last_state_x = retrpath[-1][0]
-                last_state_y = retrpath[-1][1]
-                if last_state_x - 1 < 0 or last_state_y + 0 >= self.w or (
-                        last_state_x - 1, last_state_y + 0) in visited:
-                    pass
-                else:
-                    pose_up = retrpath + [(last_state_x - 1, last_state_y + 0)]
-                    action_next = actionplan + [(-1,0)]
-                    visited.add((last_state_x - 1, last_state_y + 0))
-                    agenda.addToAgenda(pose_up, heuristic((last_state_x - 1, last_state_y + 0), goalpose), action_next)
+                next_state = {} # Initialize empty dictionary of empty states
+                for key in self.robot.keys():
+                    if self.flag[key] == 0:
+                        self.retrpath[key] = self.a[key][1]
+                        self.actionplan[key] = self.a[key][2]
+                        last_state_row = self.retrpath[key][-1][0]
+                        last_state_col = self.retrpath[key][-1][1]
+                        self.last_state[key] = (last_state_row, last_state_col)
 
-                if last_state_x + 1 >= self.h or last_state_y + 0 >= self.w or (
-                        last_state_x + 1, last_state_y + 0) in visited:
-                    pass
-                else:
-                    pose_down = retrpath + [(last_state_x + 1, last_state_y + 0)]
-                    action_next = actionplan + [(1, 0)]
-                    visited.add((last_state_x - 1, last_state_y + 0))
-                    agenda.addToAgenda(pose_down, heuristic((last_state_x + 1, last_state_y + 0), goalpose), action_next)
+                        next_state = self.checkAndMoveUp(last_state_row, last_state_col, key, next_state)
+                        next_state = self.checkAndMoveDown(last_state_row, last_state_col, key, next_state)
+                        next_state = self.checkAndMoveRight(last_state_row, last_state_col, key, next_state)
+                        next_state = self.checkAndMoveLeft(last_state_row, last_state_col, key, next_state)
 
-                if last_state_x + 0 >= self.h or last_state_y + 1 >= self.w or (
-                        last_state_x + 0, last_state_y + 1) in visited:
-                    pass
-                else:
-                    pose_right = retrpath + [(last_state_x + 0, last_state_y + 1)]
-                    action_next = actionplan + [(0, 1)]
-                    visited.add((last_state_x + 0, last_state_y + 1))
-                    agenda.addToAgenda(pose_right, heuristic((last_state_x + 0, last_state_y + 1), goalpose), action_next)
 
-                if last_state_x + 0 >= self.h or last_state_y - 1 < 0 or (
-                        last_state_x + 0, last_state_y - 1) in visited:
-                    pass
-                else:
-                    pose_left = retrpath + [(last_state_x + 0, last_state_y - 1)]
-                    action_next = actionplan + [(0, -1)]
-                    visited.add((last_state_x + 0, last_state_y - 1))
-                    agenda.addToAgenda(pose_left, heuristic((last_state_x + 0, last_state_y - 0), goalpose), action_next)
 
-class Agenda:
-    def __init__(self):
-        self.agenda = []
-
-    def addToAgenda(self, path, hc, actionplan):
-        cost = len(path) + hc
-        self.agenda.append([cost, path, actionplan])
-        self.agenda = sorted(self.agenda, key=lambda x: x[0])
-
-    def getFromAgenda(self):
-        return self.agenda.pop(0)
-
-    def isEmpty(self):
-        return not any(self.agenda)
-
-def heuristic(ip, gp):
-    return math.sqrt((ip[0] - gp[0]) ** 2 + (ip[1] - gp[1]) ** 2)
-#    return abs(ip[0]-gp[0]) + abs(ip[1]-gp[1])
-
-#----------------------------------------------------------------------------------------------------------------------
+# Now just run the Planner --------------------------------------------------------------------------------------------
 
 # First create a Map given some parameters
 sim = AStarSimulator(ROWS,COLUMNS,OBSTACLES)
 
 # Next, be able to create a robot and a goal
-ROBOTS = 1
+ROBOTS = 3
 for i in range(ROBOTS):
     sim.createRobot(random.randint(0,ROWS-1),random.randint(0,COLUMNS-1), 'robot_'+str(i+1))
     sim.createGoal(random.randint(0, ROWS-1),random.randint(0, COLUMNS-1), 'goal_'+str(i+1))
+
 
 # Next, perform sequentially-simultaneous planning of the path for each robot
 retrpath, visited, actionplan = sim.plan()

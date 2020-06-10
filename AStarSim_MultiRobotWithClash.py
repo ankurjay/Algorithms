@@ -69,6 +69,7 @@ class PathSprites(pygame.sprite.Sprite):
         self.rect = self.surf.get_rect(center=center)
 
     def move(self):
+        print "(correct poses) (row, column) =  : ", (self.rect.top / CELL_SIZE, self.rect.left / CELL_SIZE)
         pass  # Do nothing; obstacles do not move
 
 def createGoal(goal):
@@ -115,8 +116,8 @@ class Robot(pygame.sprite.Sprite):
 
     def move(self, action):
         self.rect.move_ip(CELL_SIZE*action[1], CELL_SIZE*action[0])
-        print (action[0], action[1])
-        print (self.rect.top/CELL_SIZE, self.rect.left/CELL_SIZE)
+        print "row action : ",action[0], " column action : ",action[1]
+        print "(robot poses) (row,column) : ", (self.rect.top/CELL_SIZE, self.rect.left/CELL_SIZE)
 
 class Agenda:
     def __init__(self):
@@ -382,13 +383,13 @@ class AStarSimulator(Simulator):
                             #print "Key is there"
                             next_state[key] += [(self.dontMove(last_state_row), self.moveLeftXCols(last_state_col))]
                         pose_up = self.retrpath[key] + [(self.dontMove(last_state_row), self.moveLeftXCols(last_state_col))]
-                        action_next = self.actionplan[key] + [self.right()]
+                        action_next = self.actionplan[key] + [self.left()]
                         self.visited[key].add((self.dontMove(last_state_row), self.moveLeftXCols(last_state_col)))
                         self.agenda[key].addToAgenda(pose_up, heuristic((self.dontMove(last_state_row), self.moveLeftXCols(last_state_col)), self.goalpose[key]), action_next)
                 else:  # If next_state has not been filled
                     next_state[key] = [] + [(self.dontMove(last_state_row), self.moveLeftXCols(last_state_col))]
                     pose_up = self.retrpath[key] + [(self.dontMove(last_state_row), self.moveLeftXCols(last_state_col))]
-                    action_next = self.actionplan[key] + [self.right()]
+                    action_next = self.actionplan[key] + [self.left()]
                     self.visited[key].add((self.dontMove(last_state_row), self.moveLeftXCols(last_state_col)))
                     self.agenda[key].addToAgenda(pose_up, heuristic((self.dontMove(last_state_row), self.moveLeftXCols(last_state_col)), self.goalpose[key]),action_next)
         #print "MoveLeft Complete\n\n\n\n"
@@ -466,6 +467,58 @@ class AStarSimulator(Simulator):
                         next_state = self.checkAndMoveRight(last_state_row, last_state_col, key, next_state)
                         next_state = self.checkAndMoveLeft(last_state_row, last_state_col, key, next_state)
 
+def visualise(sim):
+    pygame.init()
+    FPS = 20
+    FramePerSec = pygame.time.Clock()
+
+    DISPLAYSURF = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+    DISPLAYSURF.fill(WHITE)
+    pygame.display.set_caption("Game")
+
+    retrpath, visited, actionplan = sim.plan() # Will be dictionary of lists of tuple
+    obstacles = createObstacles(sim.getObjects()) # Will be sprite group
+    goals = createGoal(sim.getGoalCoordinates()) # will be sprite group
+    robots = createRobot(sim.getRobotCoordinates()) # will be sprite group
+
+    static_sprites = pygame.sprite.Group()
+    for i in obstacles:
+        static_sprites.add(i)
+    for i in goals:
+        static_sprites.add(i)
+
+    # Game loop
+    while True:
+        for event in pygame.event.get():
+            if event.type == QUIT:
+                pygame.quit()
+                sys.exit()
+
+        DISPLAYSURF.fill(WHITE)  # Refresh the screen
+
+        # Moves and redraws all Sprites
+        # First, the static sprites : paths, obstacles and goals
+        for key in retrpath.keys():
+            if retrpath[key]: #If exists
+                lastpos = retrpath[key].pop(0) #Get the first element
+                pathtile = PathSprites(lastpos[1], lastpos[0], color = BLUE) #Assign color from a dictionary later
+                static_sprites.add(pathtile)
+            for entity in static_sprites:
+                DISPLAYSURF.blit(entity.surf, entity.rect)
+                entity.move()
+            # Next, the dynamic sprites : robots
+            if actionplan[key]: #If exists
+                action = actionplan[key].pop(0)
+                i = int(key[-1])-1
+                robots.sprites()[i].move(action)
+                DISPLAYSURF.blit(robots.sprites()[i].surf, robots.sprites()[i].rect)
+            print "\n\n"
+        if all(not vals for vals in actionplan.values()):
+            pygame.quit()
+            sys.exit()
+
+        pygame.display.update()
+        FramePerSec.tick(FPS)  # Make sure this only repeats at FPS rate
 
 
 # Now just run the Planner --------------------------------------------------------------------------------------------
@@ -474,14 +527,15 @@ class AStarSimulator(Simulator):
 sim = AStarSimulator(ROWS,COLUMNS,OBSTACLES)
 
 # Next, be able to create a robot and a goal
-ROBOTS = 3
+ROBOTS = 1
 for i in range(ROBOTS):
     sim.createRobot(random.randint(0,ROWS-1),random.randint(0,COLUMNS-1), 'robot_'+str(i+1))
     sim.createGoal(random.randint(0, ROWS-1),random.randint(0, COLUMNS-1), 'goal_'+str(i+1))
 
+visualise(sim)
 
 # Next, perform sequentially-simultaneous planning of the path for each robot
-retrpath, visited, actionplan = sim.plan()
+#retrpath, visited, actionplan = sim.plan()
 
-print retrpath
-print actionplan
+#print retrpath
+#print actionplan

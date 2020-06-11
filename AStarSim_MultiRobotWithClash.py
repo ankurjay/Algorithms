@@ -3,7 +3,7 @@ from pygame.locals import *
 import random, math, sys
 import numpy as np
 
-OBSTACLES = 50
+OBSTACLES = 500
 ROWS = 100
 COLUMNS = 100
 CELL_SIZE = 10
@@ -159,8 +159,13 @@ class Simulator(Map):
             self.occupancies[h][w] = 3
             print "Goal created at (" + str(h) + "," + str(w) + ") : " + str(self.occupancies[h][w])
         else:
-            print "Cannot create Goal at this position"
-            return
+            print "Cannot create goal at this position. Randomly generating a goal."
+            newh, neww = random.randint(0,ROWS-1),random.randint(0,COLUMNS-1)
+            while self.occupancies[newh][neww] != 0: # if not occupied
+                newh, neww = random.randint(0, ROWS - 1), random.randint(0, COLUMNS - 1)
+            self.goal[name] = (newh, neww)
+            self.occupancies[newh][neww] = 3
+            print "Goal created at (" + str(newh) + "," + str(neww) + ") : " + str(self.occupancies[newh][neww])
 
     def createRobot(self, h, w, name):
         if not self.robot and self.occupancies[h][w]==0:
@@ -175,8 +180,13 @@ class Simulator(Map):
             self.occupancies[h][w] = 2
             print "Robot created at (" + str(h) + "," + str(w) + ") : " + str(self.occupancies[h][w])
         else:
-            print "Cannot create robot at this position"
-            return
+            print "Cannot create robot at this position. Randomly generating a starting pose."
+            newh, neww = random.randint(0,ROWS-1),random.randint(0,COLUMNS-1)
+            while self.occupancies[newh][neww] != 0: # if not occupied
+                newh, neww = random.randint(0, ROWS - 1), random.randint(0, COLUMNS - 1)
+            self.robot[name] = (newh, neww)
+            self.occupancies[newh][neww] = 2
+            print "Robot created at (" + str(newh) + "," + str(neww) + ") : " + str(self.occupancies[newh][neww])
 
     def getMap(self):
         """Returns a set of tuples of obstacle coordinates"""

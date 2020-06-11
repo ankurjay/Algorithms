@@ -13,3 +13,7 @@ Required Libraries:
 2) NumPy
 
 Tested for Python 2.7
+
+The following shows AStarSim_MultiRobotWithClashPenalty.py in action:
+
+![alt-text](https://github.com/ankurjay/Algorithms/blob/master/Capture_Multi.gif)

@@ -172,7 +172,7 @@ class Simulator(Map):
             self.robot = {name: (h, w)}
             self.occupancies[h][w] = 2
             print "Robot created at (" + str(h) + "," + str(w) + ") : " + str(self.occupancies[h][w])
-        elif name in self.robot:
+        elif self.robot and name in self.robot:
             print "Cannot create robot. Robot already exists"
             return
         elif name not in self.robot and self.occupancies[h][w]==0:
@@ -537,7 +537,7 @@ def visualise(sim):
 sim = AStarSimulator(ROWS,COLUMNS,OBSTACLES)
 
 # Next, be able to create a robot and a goal
-ROBOTS = 10
+ROBOTS = 20
 for i in range(ROBOTS):
     # Limit unique identities to 1000 robots
     identity = i+1

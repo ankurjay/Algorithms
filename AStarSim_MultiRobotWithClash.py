@@ -3,7 +3,7 @@ from pygame.locals import *
 import random, math, sys
 import numpy as np
 
-OBSTACLES = 500
+OBSTACLES = 2000
 ROWS = 100
 COLUMNS = 100
 CELL_SIZE = 10
@@ -414,7 +414,8 @@ class AStarSimulator(Simulator):
         for key in self.robot.keys():
             self.initpose[key] = self.getRobotCoordinates()[key]
             self.initaction[key] = [] + [(0,0)]
-            self.goalpose[key] = self.getGoalCoordinates()['goal_'+str(key[-1])]  # Here I am making the same key refer to goal and robot
+            #print 'goal_'+str(key[-3:]), key
+            self.goalpose[key] = self.getGoalCoordinates()['goal_'+str(key[-3:])]  # Here I am making the same key refer to goal and robot
             self.agenda[key] = Agenda()
             self.visited[key] = {self.initpose[key]}
             self.visited[key].update(self.obstacles) # Adding obstacles to list of visited points so we won't try to move to these points on map
@@ -536,10 +537,18 @@ def visualise(sim):
 sim = AStarSimulator(ROWS,COLUMNS,OBSTACLES)
 
 # Next, be able to create a robot and a goal
-ROBOTS = 5
+ROBOTS = 10
 for i in range(ROBOTS):
-    sim.createRobot(random.randint(0,ROWS-1),random.randint(0,COLUMNS-1), 'robot_'+str(i+1))
-    sim.createGoal(random.randint(0, ROWS-1),random.randint(0, COLUMNS-1), 'goal_'+str(i+1))
+    # Limit unique identities to 1000 robots
+    identity = i+1
+    if identity < 10:
+        identity = '00'+str(identity)
+    elif identity >=10 and identity < 99:
+        identity = '0' + str(identity)
+    else:
+        identity = str(identity)
+    sim.createRobot(random.randint(0,ROWS-1),random.randint(0,COLUMNS-1), 'robot_'+identity)
+    sim.createGoal(random.randint(0, ROWS-1),random.randint(0, COLUMNS-1), 'goal_'+identity)
 
 # Finally, visualize
 visualise(sim)

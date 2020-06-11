@@ -147,46 +147,68 @@ class Simulator(Map):
         self.goal = None
 
     def createGoal(self, h, w, name):
-        if not self.goal and self.occupancies[h][w]==0:
-            self.goal = {name: (h, w)}
-            self.occupancies[h][w] = 3
-            print "Goal created at (" + str(h) + "," + str(w) + ") : " + str(self.occupancies[h][w])
-        elif name in self.goal:
-            print "Cannot create goal. Goal already exists"
-            return
-        elif name not in self.goal and self.occupancies[h][w]==0:
-            self.goal[name] = (h, w)
-            self.occupancies[h][w] = 3
-            print "Goal created at (" + str(h) + "," + str(w) + ") : " + str(self.occupancies[h][w])
-        else:
-            print "Cannot create goal at this position. Randomly generating a goal."
-            newh, neww = random.randint(0,ROWS-1),random.randint(0,COLUMNS-1)
-            while self.occupancies[newh][neww] != 0: # if not occupied
+        if not self.goal:
+            if self.occupancies[h][w]==0: # If self.goal is not created and h,w is not occupied
+                self.goal = {name: (h, w)}
+                self.occupancies[h][w] = 3
+                print "Goal created at (" + str(h) + "," + str(w) + ") : " + str(self.occupancies[h][w])
+            elif self.occupancies[h][w] != 0: # If self.goal is not created and h,w is occupied
+                print "Cannot create goal at this position. Randomly generating a goal."
                 newh, neww = random.randint(0, ROWS - 1), random.randint(0, COLUMNS - 1)
-            self.goal[name] = (newh, neww)
-            self.occupancies[newh][neww] = 3
-            print "Goal created at (" + str(newh) + "," + str(neww) + ") : " + str(self.occupancies[newh][neww])
+                while self.occupancies[newh][neww] != 0:  # if occupied
+                    newh, neww = random.randint(0, ROWS - 1), random.randint(0, COLUMNS - 1)
+                self.goal = {name: (newh, neww)}
+                self.occupancies[newh][neww] = 3
+                print "Goal created at (" + str(newh) + "," + str(neww) + ") : " + str(self.occupancies[newh][neww])
+        elif self.goal:
+            if name in self.goal: # If self.goal is created and name already exists
+                print "Cannot create goal. Goal already exists"
+                return
+            elif name not in self.goal:
+                if self.occupancies[h][w]==0: # If self.goal is created, name does not exist and unoccupied
+                    self.goal[name] = (h, w)
+                    self.occupancies[h][w] = 3
+                    print "Goal created at (" + str(h) + "," + str(w) + ") : " + str(self.occupancies[h][w])
+                elif self.occupancies[h][w]!=0: # If self.goal is created, name does not exist and occupied
+                    print "Cannot create goal at this position. Randomly generating a goal."
+                    newh, neww = random.randint(0, ROWS - 1), random.randint(0, COLUMNS - 1)
+                    while self.occupancies[newh][neww] != 0:  # if occupied
+                        newh, neww = random.randint(0, ROWS - 1), random.randint(0, COLUMNS - 1)
+                    self.goal[name] = (newh, neww)
+                    self.occupancies[newh][neww] = 3
+                    print "Goal created at (" + str(newh) + "," + str(neww) + ") : " + str(self.occupancies[newh][neww])
 
     def createRobot(self, h, w, name):
-        if not self.robot and self.occupancies[h][w]==0:
-            self.robot = {name: (h, w)}
-            self.occupancies[h][w] = 2
-            print "Robot created at (" + str(h) + "," + str(w) + ") : " + str(self.occupancies[h][w])
-        elif self.robot and name in self.robot:
-            print "Cannot create robot. Robot already exists"
-            return
-        elif name not in self.robot and self.occupancies[h][w]==0:
-            self.robot[name] = (h, w)
-            self.occupancies[h][w] = 2
-            print "Robot created at (" + str(h) + "," + str(w) + ") : " + str(self.occupancies[h][w])
-        else:
-            print "Cannot create robot at this position. Randomly generating a starting pose."
-            newh, neww = random.randint(0,ROWS-1),random.randint(0,COLUMNS-1)
-            while self.occupancies[newh][neww] != 0: # if not occupied
+        if not self.robot:
+            if self.occupancies[h][w]==0: # If self.goal is not created and h,w is not occupied
+                self.robot = {name: (h, w)}
+                self.occupancies[h][w] = 2
+                print "Robot created at (" + str(h) + "," + str(w) + ") : " + str(self.occupancies[h][w])
+            elif self.occupancies[h][w] != 0: # If self.goal is not created and h,w is occupied
+                print "Cannot create robot at this position. Randomly generating a goal."
                 newh, neww = random.randint(0, ROWS - 1), random.randint(0, COLUMNS - 1)
-            self.robot[name] = (newh, neww)
-            self.occupancies[newh][neww] = 2
-            print "Robot created at (" + str(newh) + "," + str(neww) + ") : " + str(self.occupancies[newh][neww])
+                while self.occupancies[newh][neww] != 0:  # if occupied
+                    newh, neww = random.randint(0, ROWS - 1), random.randint(0, COLUMNS - 1)
+                self.robot = {name: (newh, neww)}
+                self.occupancies[newh][neww] = 2
+                print "Robot created at (" + str(newh) + "," + str(neww) + ") : " + str(self.occupancies[newh][neww])
+        elif self.robot:
+            if name in self.robot: # If self.goal is created and name already exists
+                print "Cannot create robot. Goal already exists"
+                return
+            elif name not in self.robot:
+                if self.occupancies[h][w]==0: # If self.goal is created, name does not exist and unoccupied
+                    self.robot[name] = (h, w)
+                    self.occupancies[h][w] = 2
+                    print "Robot created at (" + str(h) + "," + str(w) + ") : " + str(self.occupancies[h][w])
+                elif self.occupancies[h][w]!=0: # If self.goal is created, name does not exist and occupied
+                    print "Cannot create robot at this position. Randomly generating a goal."
+                    newh, neww = random.randint(0, ROWS - 1), random.randint(0, COLUMNS - 1)
+                    while self.occupancies[newh][neww] != 0:  # if occupied
+                        newh, neww = random.randint(0, ROWS - 1), random.randint(0, COLUMNS - 1)
+                    self.robot[name] = (newh, neww)
+                    self.occupancies[newh][neww] = 2
+                    print "Robot created at (" + str(newh) + "," + str(neww) + ") : " + str(self.occupancies[newh][neww])
 
     def getMap(self):
         """Returns a set of tuples of obstacle coordinates"""
@@ -414,7 +436,7 @@ class AStarSimulator(Simulator):
         for key in self.robot.keys():
             self.initpose[key] = self.getRobotCoordinates()[key]
             self.initaction[key] = [] + [(0,0)]
-            #print 'goal_'+str(key[-3:]), key
+            print 'goal_'+str(key[-3:]), key
             self.goalpose[key] = self.getGoalCoordinates()['goal_'+str(key[-3:])]  # Here I am making the same key refer to goal and robot
             self.agenda[key] = Agenda()
             self.visited[key] = {self.initpose[key]}

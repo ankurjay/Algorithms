@@ -553,6 +553,14 @@ def visualise(sim):
     for i in goals:
         static_sprites.add(i)
 
+    # Create a dictionary of unique colors for each path
+    tilecolor = {}
+    for key in retrpath.keys():
+        (r, g, b) = (random.randint(0,255), random.randint(0,255),random.randint(0,255))
+        while (r, g, b) in [BLUE, RED, GREEN, BLACK, WHITE]:
+            (r, g, b) = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+        tilecolor[key] = (r, g, b)
+
     # Game loop
     while True:
         for event in pygame.event.get():
@@ -567,7 +575,7 @@ def visualise(sim):
         for key in retrpath.keys():
             if retrpath[key]: #If exists
                 lastpos = retrpath[key].pop(0) #Get the first element
-                pathtile = PathSprites(lastpos[1], lastpos[0], color = BLUE) #Assign color from a dictionary later
+                pathtile = PathSprites(lastpos[1], lastpos[0], color = tilecolor[key]) #Assign color from a dictionary later
                 static_sprites.add(pathtile)
             for entity in static_sprites:
                 DISPLAYSURF.blit(entity.surf, entity.rect)

@@ -69,7 +69,7 @@ class PathSprites(pygame.sprite.Sprite):
         self.rect = self.surf.get_rect(center=center)
 
     def move(self):
-        print "(correct poses) (row, column) =  : ", (self.rect.top / CELL_SIZE, self.rect.left / CELL_SIZE)
+        #print "(correct poses) (row, column) =  : ", (self.rect.top / CELL_SIZE, self.rect.left / CELL_SIZE)
         pass  # Do nothing; obstacles do not move
 
 def createGoal(goal):
@@ -97,12 +97,11 @@ class Goal(pygame.sprite.Sprite):
 def createRobot(robot):
     """
     :param robot: A dictionary of  robot tuples (row, column)
-    :return: A group of robots specified by (column, row) or (x,y)
+    :return: A dictionary of robot sprites specified by (column, row) or (x,y)
     """
-    robots = pygame.sprite.Group()
+    robots = {}
     for key in robot.keys():
-        R = Robot(robot[key][1], robot[key][0])
-        robots.add(R)
+        robots[key] = Robot(robot[key][1], robot[key][0])
     return robots
 
 class Robot(pygame.sprite.Sprite):
@@ -116,8 +115,8 @@ class Robot(pygame.sprite.Sprite):
 
     def move(self, action):
         self.rect.move_ip(CELL_SIZE*action[1], CELL_SIZE*action[0])
-        print "row action : ",action[0], " column action : ",action[1]
-        print "(robot poses) (row,column) : ", (self.rect.top/CELL_SIZE, self.rect.left/CELL_SIZE)
+        #print "row action : ",action[0], " column action : ",action[1]
+        #print "(robot poses) (row,column) : ", (self.rect.top/CELL_SIZE, self.rect.left/CELL_SIZE)
 
 class Agenda:
     def __init__(self):
@@ -479,7 +478,7 @@ def visualise(sim):
     retrpath, visited, actionplan = sim.plan() # Will be dictionary of lists of tuple
     obstacles = createObstacles(sim.getObjects()) # Will be sprite group
     goals = createGoal(sim.getGoalCoordinates()) # will be sprite group
-    robots = createRobot(sim.getRobotCoordinates()) # will be sprite group
+    robots = createRobot(sim.getRobotCoordinates()) # will be dictionary of sprites
 
     static_sprites = pygame.sprite.Group()
     for i in obstacles:
@@ -507,12 +506,12 @@ def visualise(sim):
                 DISPLAYSURF.blit(entity.surf, entity.rect)
                 entity.move()
             # Next, the dynamic sprites : robots
+        for key in retrpath.keys():
             if actionplan[key]: #If exists
                 action = actionplan[key].pop(0)
-                i = int(key[-1])-1
-                robots.sprites()[i].move(action)
-                DISPLAYSURF.blit(robots.sprites()[i].surf, robots.sprites()[i].rect)
-            print "\n\n"
+                robots[key].move(action)
+                DISPLAYSURF.blit(robots[key].surf, robots[key].rect)
+
         if all(not vals for vals in actionplan.values()):
             pygame.quit()
             sys.exit()
@@ -527,15 +526,11 @@ def visualise(sim):
 sim = AStarSimulator(ROWS,COLUMNS,OBSTACLES)
 
 # Next, be able to create a robot and a goal
-ROBOTS = 1
+ROBOTS = 5
 for i in range(ROBOTS):
     sim.createRobot(random.randint(0,ROWS-1),random.randint(0,COLUMNS-1), 'robot_'+str(i+1))
     sim.createGoal(random.randint(0, ROWS-1),random.randint(0, COLUMNS-1), 'goal_'+str(i+1))
 
+# Finally, visualize
 visualise(sim)
 
-# Next, perform sequentially-simultaneous planning of the path for each robot
-#retrpath, visited, actionplan = sim.plan()
-
-#print retrpath
-#print actionplan
